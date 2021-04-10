@@ -46,6 +46,9 @@ function App() {
           case 'playerList':
               setPlayers(Object.keys(parsed.content));
               break;
+          case 'startgame':
+            goToGame(parsed.content);
+            break;
           case 'text':
           default:
             addMessage(`received <<<  ${message}`);
@@ -70,7 +73,25 @@ function App() {
       content: {
           playerName: playerMe
       }
-  }));
+    }));
+  }
+
+  const goToGame = (key) => {
+    window.location.href = `http://${process.env.REACT_APP_GAME_HOST}/gameId=${key}&player=${playerMe}`;
+  }
+
+  const startGame = async (player) => {
+    if (player !== playerMe) {
+      const key = `game-${Math.random() * new Date().getMilliseconds()}`
+      await socket.send(JSON.stringify({
+        msgType: 'startgame',
+        content: {
+          players: [player, playerMe],
+          key
+        }
+      }));
+      goToGame(key);
+    }
   }
 
   return (
@@ -82,7 +103,7 @@ function App() {
       </div>
       <div className="players__container">
         {players.map((player, index) => {
-          return (<p className="player" key={`player-${index}`}>{player}</p>)
+          return (<p className="player" key={`player-${index}`} onClick={() => startGame(player)}>{player}</p>)
         })}
       </div>
       <div className="messages">

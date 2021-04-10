@@ -14,7 +14,7 @@
   },
   "scripts": {
     "start": "react-scripts start",
-    "start:local": "REACT_APP_SERVER_HOST=localhost:5000 yarn start",
+    "start:local": "REACT_APP_SERVER_HOST=localhost:5000 REACT_APP_GAME_HOST=localhost:3001 yarn start",
     "build": "react-scripts build",
     "test": "react-scripts test",
     "eject": "react-scripts eject"
