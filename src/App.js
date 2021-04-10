@@ -17,7 +17,7 @@ function App() {
       return;
     }
     
-    let uri = "ws://" + window.location.host + window.location.pathname;
+    let uri = "ws://" + process.env.REACT_APP_SERVER_HOST + window.location.pathname;
     uri = uri.substring(0, uri.lastIndexOf('/'));
     socket = new WebSocket(uri);
     
@@ -45,7 +45,7 @@ function App() {
       return;
     }
     const text = document.getElementById("input").value;
-    socket.send(text);
+    socket.send(JSON.stringify({ msgType: 'text', content: text }));
     addMessage(`sent >>>  ${text}`);
   }
 
