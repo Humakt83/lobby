@@ -1,4 +1,4 @@
-import React, {useState} from 'react';
+import React, {useState, useEffect} from 'react';
 import './App.css';
 
 let socket;
@@ -6,10 +6,17 @@ let socket;
 function App() {
 
   const [messages, setMessages] = useState([]);
+  const [players, setPlayers] = useState([]);
+  const [playerMe, setPlayerMe] = useState('');
+  const [registered, setRegistered] = useState(false);
 
   const addMessage = (message) => {
     setMessages(messages.concat(message))
   }
+
+  useEffect(() => {
+    open();
+  },[]);
   
   const open = () => {
     if (socket) {
@@ -27,10 +34,27 @@ function App() {
     
     socket.onopen = function(event) {
       addMessage(`opened, Connected to ${event.currentTarget.url}`);
+      socket.send(JSON.stringify({ msgType: 'getplayers' }));
     };
     
     socket.onmessage = function(event) {
-        addMessage(`received <<<  ${event.data}`);
+      const message = event.data
+      try {
+        const parsed = JSON.parse(message);
+        const msgType = parsed?.msgType;
+        switch (msgType) {
+          case 'playerList':
+              setPlayers(Object.keys(parsed.content));
+              break;
+          case 'text':
+          default:
+            addMessage(`received <<<  ${message}`);
+            break;
+        }
+      } catch(e) {
+        console.log(e);
+        addMessage(`error with message <<< ${message}`)
+      }
     };
     
     socket.onclose = function(event) {
@@ -39,39 +63,32 @@ function App() {
     };
   }
 
-  const send = () => {
-    if (!socket) {
-      addMessage(`error Not connected`);
-      return;
-    }
-    const text = document.getElementById("input").value;
-    socket.send(JSON.stringify({ msgType: 'text', content: text }));
-    addMessage(`sent >>>  ${text}`);
+  const register = () => {
+    setRegistered(true);
+    socket.send(JSON.stringify({
+      msgType: 'registerplayer',
+      content: {
+          playerName: playerMe
+      }
+  }));
   }
-
-  const close = () => {
-    if (!socket) {
-      addMessage(`error 'Not connected`);
-      return;
-    }
-    socket.close(1000, 'Close button clicked');
-  };
 
   return (
     <div className="App">
-      <h1>WebSocket Demo</h1>
+      <h1>Lobby</h1>
       <div>
-        <input type="text" id="input" value="Enter text to reverse!" />
+        <input disabled={registered} type="text" id="playerName" placeholder="Player name" onChange={(event) => setPlayerMe(event.target.value)}/>
+        <button disabled={registered} type="button" id="registerPlayer" onClick={register}>Register</button>
       </div>
-      <div>
-          <button type="button" id="open" onClick={open}>Open</button>
-          <button type="button" id="send" onClick={send}>Send</button>
-          <button type="button" id="close" onClick={close}>Close</button>
+      <div className="players__container">
+        {players.map((player, index) => {
+          return (<p className="player" key={`player-${index}`}>{player}</p>)
+        })}
       </div>
-      <div>
-        {messages.map(message => {
+      <div className="messages">
+        {messages.map((message, index) => {
           return (
-            <p>{message}</p>
+            <p className="message" key={`message-${index}`}>{message}</p>
           )
         })}
       </div>
