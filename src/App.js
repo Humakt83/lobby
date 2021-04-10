@@ -77,7 +77,7 @@ function App() {
   }
 
   const goToGame = (key) => {
-    window.location.href = `http://localhost:3001/gameId=${key}&player=${playerMe}`;
+    window.location.href = `http://${process.env.REACT_APP_GAME_HOST}/gameId=${key}&player=${playerMe}`;
   }
 
   const startGame = async (player) => {
