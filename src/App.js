@@ -12,7 +12,7 @@ function App() {
   const [registered, setRegistered] = useState(false);
 
   const addMessage = (message) => {
-    messages.push(message);
+    messages.unshift(message);
     setMessages(messages);
   }
 
@@ -52,7 +52,7 @@ function App() {
           break;
         case 'text':
         default:
-          addMessage(`received <<<  ${message?.content ? message.content : message}`);
+          addMessage(message?.content ? message.content : message);
           break;
       }
     };
