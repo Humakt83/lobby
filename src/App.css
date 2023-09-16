@@ -31,3 +31,12 @@
 .player {
   font-weight: bolder;
 }
+
+.room {
+  max-width: 60vw;
+  border-radius: 5px;
+  border: 2px solid red;
+  background-color: lightgoldenrodyellow;
+  padding: 0.5rem 2rem;
+  margin: 2rem auto;
+}

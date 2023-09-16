@@ -10,6 +10,8 @@ function App() {
   const [chatMessage, setChatMessage] = useState("");
   const playerMe = useRef('');
   const [registered, setRegistered] = useState(false);
+  const [isRoom, setRoom] = useState(false);
+  const [playersInRoom, setPlayersInRoom] = useState([]);
 
   const addMessage = (message) => {
     messages.unshift(message);
@@ -50,6 +52,9 @@ function App() {
         case 'startgame':
           goToGame(message.content);
           break;
+        case 'invite':
+          goToRoom(message.content); 
+          break;
         case 'text':
         default:
           addMessage(message?.content ? message.content : message);
@@ -88,12 +93,31 @@ function App() {
     setChatMessage("");
   }
 
+  const goToRoom = (players) => {
+    setPlayersInRoom(players);
+    setRoom(true);
+  }
+
   const goToGame = (key) => {
     if (playerMe.current.length < 1) {
       console.log('Something went wrong');
       return;
     }
     window.open(`http://localhost:3001/gameId=${key}&player=${playerMe.current}`, '_blank');
+  }
+
+  const inviteToGameRoom = async (player) => {
+    if (player !== playerMe.current) {
+      const key = `gameroom-${Math.random() * new Date().getMilliseconds()}`
+      setRoom(true);
+      await socket.send(JSON.stringify({
+        msgType: 'inviteroom',
+        content: {
+          players: [player, playerMe.current],
+          key
+        }
+      }));
+    }
   }
 
   const startGame = async (player) => {
@@ -131,7 +155,7 @@ function App() {
       <div className="content">
         <div className="players">
           {players.map((player, index) => {
-            return (<p className="player" key={`player-${index}`} onClick={() => startGame(player)}>{player}</p>)
+            return (<p className="player" key={`player-${index}`} onClick={() => inviteToGameRoom(player)}>{player}</p>)
           })}
         </div>
         <div className="messages">
@@ -142,6 +166,12 @@ function App() {
           })}
         </div>
       </div>
+      {isRoom && 
+        <div className="room">
+          {playersInRoom.map((player, index) => {
+            return (<p className="player" key={`player-${index}`}>{player}</p>)
+          })}
+        </div>}
     </div>
   );
 }
