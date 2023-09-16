@@ -55,6 +55,9 @@ function App() {
         case 'invite':
           goToRoom(message.content); 
           break;
+        case 'joinroom':
+          addPlayerToRoom(message.content);
+          break;
         case 'text':
         default:
           addMessage(message?.content ? message.content : message);
@@ -108,29 +111,39 @@ function App() {
 
   const inviteToGameRoom = async (player) => {
     if (player !== playerMe.current) {
-      const key = `gameroom-${Math.random() * new Date().getMilliseconds()}`
-      setRoom(true);
-      await socket.send(JSON.stringify({
-        msgType: 'inviteroom',
-        content: {
-          players: [player, playerMe.current],
-          key
-        }
-      }));
+      if (isRoom) {
+        await socket.send(JSON.stringify({
+          msgType: 'invitetoexistingroom',
+          content: { player }
+        }));
+      } else {
+        const key = `gameroom-${Math.random() * new Date().getMilliseconds()}`
+        setRoom(true);
+        await socket.send(JSON.stringify({
+          msgType: 'inviteroom',
+          content: {
+            players: [player, playerMe.current],
+            key
+          }
+        }));
+      }
     }
   }
 
-  const startGame = async (player) => {
-    if (player !== playerMe.current) {
-      const key = `game-${Math.random() * new Date().getMilliseconds()}`
-      await socket.send(JSON.stringify({
-        msgType: 'startgame',
-        content: {
-          players: [player, playerMe.current],
-          key
-        }
-      }));
-    }
+  const addPlayerToRoom = (player) => {
+    playersInRoom.unshift(player);
+    setPlayersInRoom(playersInRoom);
+  };
+
+  const startGame = async () => {
+    const key = `game-${Math.random() * new Date().getMilliseconds()}`
+    await socket.send(JSON.stringify({
+      msgType: 'startgame',
+      content: {
+        players: playersInRoom,
+        key
+      }
+    }));
   }
 
   return (
@@ -171,6 +184,7 @@ function App() {
           {playersInRoom.map((player, index) => {
             return (<p className="player" key={`player-${index}`}>{player}</p>)
           })}
+          <button onClick={() => startGame()}>Start Treasure Hunt</button>
         </div>}
     </div>
   );
