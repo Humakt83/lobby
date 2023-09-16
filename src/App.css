@@ -2,14 +2,26 @@
   text-align: center;
 }
 
-.players_container {
+.content {
   display: flex;
   flex-direction: row;
+  margin-top: 2rem;
+  border-top: 1px solid black;
+}
+
+.players {
+  display: inline-flex;
+  flex-direction: column;
+  max-width: 40vw;
+  margin: 0 2rem;
 }
 
 .messages {
-  margin-top: 2rem;
-  border-top: 1px solid black;
+  display: inline-flex;
+  flex-direction: column;
+  max-width: 60vw;
+  border-left: 1px solid black;
+
 }
 
 .message {
@@ -18,5 +30,4 @@
 
 .player {
   font-weight: bolder;
-  font-size: larger;
 }

@@ -1,4 +1,4 @@
-import React, {useState, useEffect} from 'react';
+import React, {useState, useRef} from 'react';
 import './App.css';
 
 let socket;
@@ -7,18 +7,16 @@ function App() {
 
   const [messages, setMessages] = useState([]);
   const [players, setPlayers] = useState([]);
-  const [playerMe, setPlayerMe] = useState('');
+  const [chatMessage, setChatMessage] = useState("");
+  const playerMe = useRef('');
   const [registered, setRegistered] = useState(false);
 
   const addMessage = (message) => {
-    setMessages(messages.concat(message))
+    messages.push(message);
+    setMessages(messages);
   }
 
-  useEffect(() => {
-    open();
-  },[]);
-  
-  const open = () => {
+  const open = async () => {
     if (socket) {
       addMessage('Already connected');
       return;
@@ -26,7 +24,7 @@ function App() {
     
     let uri = "ws://" + process.env.REACT_APP_SERVER_HOST + window.location.pathname;
     uri = uri.substring(0, uri.lastIndexOf('/'));
-    socket = new WebSocket(uri);
+    socket = await new WebSocket(uri);
     
     socket.onerror = function(error) {
       addMessage(`error ${error}`);
@@ -34,29 +32,28 @@ function App() {
     
     socket.onopen = function(event) {
       addMessage(`opened, Connected to ${event.currentTarget.url}`);
-      socket.send(JSON.stringify({ msgType: 'getplayers' }));
     };
     
     socket.onmessage = function(event) {
-      const message = event.data
+      console.log(event);
+      let message = event.data
       try {
-        const parsed = JSON.parse(message);
-        const msgType = parsed?.msgType;
-        switch (msgType) {
-          case 'playerList':
-              setPlayers(Object.keys(parsed.content));
-              break;
-          case 'startgame':
-            goToGame(parsed.content);
-            break;
-          case 'text':
-          default:
-            addMessage(`received <<<  ${message}`);
-            break;
-        }
+        message = JSON.parse(message);
       } catch(e) {
         console.log(e);
-        addMessage(`error with message <<< ${message}`)
+      }
+      const msgType = message?.msgType;
+      switch (msgType) {
+        case 'playerList':
+          setPlayers(Object.keys(message.content));
+          break;
+        case 'startgame':
+          goToGame(message.content);
+          break;
+        case 'text':
+        default:
+          addMessage(`received <<<  ${message?.content ? message.content : message}`);
+          break;
       }
     };
     
@@ -66,52 +63,84 @@ function App() {
     };
   }
 
-  const register = () => {
+  const register = async () => {
     setRegistered(true);
-    socket.send(JSON.stringify({
-      msgType: 'registerplayer',
-      content: {
-          playerName: playerMe
+    await open();
+    const registerInner = () => {
+      if (socket.readyState === 1) {
+        socket.send(JSON.stringify({
+          msgType: 'registerplayer',
+          content: {
+              playerName: playerMe.current
+          }}));  
+      } else {
+        setTimeout(registerInner, 100);
       }
-    }));
+    }
+    registerInner();
+  }
+
+  const chat = async () => {
+    socket.send(JSON.stringify({
+      msgType: 'text',
+      content: chatMessage
+    }))
+    setChatMessage("");
   }
 
   const goToGame = (key) => {
-    window.location.href = `http://localhost:3001/gameId=${key}&player=${playerMe}`;
+    if (playerMe.current.length < 1) {
+      console.log('Something went wrong');
+      return;
+    }
+    window.open(`http://localhost:3001/gameId=${key}&player=${playerMe.current}`, '_blank');
   }
 
   const startGame = async (player) => {
-    if (player !== playerMe) {
+    if (player !== playerMe.current) {
       const key = `game-${Math.random() * new Date().getMilliseconds()}`
       await socket.send(JSON.stringify({
         msgType: 'startgame',
         content: {
-          players: [player, playerMe],
+          players: [player, playerMe.current],
           key
         }
       }));
-      goToGame(key);
     }
   }
 
   return (
     <div className="App">
       <h1>Lobby</h1>
-      <div>
-        <input disabled={registered} type="text" id="playerName" placeholder="Player name" onChange={(event) => setPlayerMe(event.target.value)}/>
-        <button disabled={registered} type="button" id="registerPlayer" onClick={register}>Register</button>
-      </div>
-      <div className="players__container">
-        {players.map((player, index) => {
-          return (<p className="player" key={`player-${index}`} onClick={() => startGame(player)}>{player}</p>)
-        })}
-      </div>
-      <div className="messages">
-        {messages.map((message, index) => {
-          return (
-            <p className="message" key={`message-${index}`}>{message}</p>
-          )
-        })}
+      {!registered && 
+        <div>
+          <input disabled={registered} type="text" id="playerName" placeholder="Player name" onChange={(event) => {
+            if (!registered) {
+              playerMe.current = event.target.value;
+            }
+          }}/>
+          <button disabled={registered} type="button" id="registerPlayer" onClick={register}>Join</button>
+        </div>
+      }
+      {registered && 
+        <div>
+          <input placeholder="Send message" type="text" onChange={(event) => setChatMessage(event.target.value)}/>
+          <button disabled={chatMessage.length < 1} type="button" onClick={chat}>Send</button>
+        </div>
+      }
+      <div className="content">
+        <div className="players">
+          {players.map((player, index) => {
+            return (<p className="player" key={`player-${index}`} onClick={() => startGame(player)}>{player}</p>)
+          })}
+        </div>
+        <div className="messages">
+          {messages.map((message, index) => {
+            return (
+              <span className="message" key={`message-${index}`}>{message}</span>
+            )
+          })}
+        </div>
       </div>
     </div>
   );
